@@ -159,18 +159,22 @@ class ModelOutput:
     prompt: str
     outputs: List[InnerOutput]
 
-def _load_models_config() -> Dict[str, Any]:
+def load_models_config() -> Dict[str, Any]:
     base = os.path.dirname(os.path.dirname(__file__))  # points to src/reasoning_trust
     cfg_path = os.path.join(base, "config", "models.yaml")
     with open(cfg_path, "r") as fh:
         return yaml.safe_load(fh) or {}
 
-def initialize_model(model_name: str = None) -> Tuple[Any, Dict[str, Any], Any]:
-    cfg = _load_models_config()
+def load_model_config(model_name: str) -> Dict[str, Any]:
+    cfg = load_models_config()
     defaults = cfg.get("defaults", {}) or {}
     model_name = (model_name or defaults.get("model") or "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B")
     models = cfg.get("models", {})
     model_cfg = models.get(model_name, {})
+    return model_cfg
+
+def initialize_model(model_name: str = None) -> Tuple[Any, Dict[str, Any], Any]:
+    model_cfg = load_model_config(model_name)
 
     if "deepseek" in model_name.lower():
         model = DeepSeekLLM(model_cfg)

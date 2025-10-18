@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 import pandas as pd
 from datasets import load_dataset
 
-from reasoning_trust.models.initialize_model import initialize_model, generate_response as llm_generate_response
+from reasoning_trust.models.initialize_model import initialize_model, generate_response as llm_generate_response, load_model_config
 from reasoning_trust.perspectives.toxicity.generate_message import MessageGenerator
 from reasoning_trust.perspectives.toxicity.toxicity_system_prompts import PROMPTS
 
@@ -83,7 +83,13 @@ def main(
     tpl = PROMPTS[tmp_id]
     sys_prompt = tpl.get("sys_prompt", "")
     task_desc = tpl.get("task_desc", "")
-    generator = MessageGenerator(sys_prompt, task_desc)
+
+
+    model_cfg = load_model_config(model_name)
+    model_family = model_cfg.get("model_family", "model")
+    model_provider = model_cfg.get("model_provider", "your provider")
+
+    generator = MessageGenerator(sys_prompt, task_desc, model_family, model_provider)
 
     tokenizer, sampling_params, model = initialize_model(model_name)
 
