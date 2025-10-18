@@ -1,0 +1,15 @@
+# yaml
+hydra:
+  launcher:
+    _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SubmititLauncher
+    # optional global settings (pass through to submitit)
+    params:
+      partition: short
+      gpus_per_node: 0
+      cpus_per_task: 4
+      nodes: 1
+      mem_gb: 16
+      timeout_min: 60
+      # optional: array_parallelism controls how many array jobs run concurrently
+      array_parallelism: 100
+    # optional: job environment variables or sbatch options can be added via "sbatch_args" if needed

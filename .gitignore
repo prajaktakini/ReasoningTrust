@@ -1,0 +1,12 @@
+.idea
+# Ignore Python cache directories anywhere in the repo
+__pycache__/
+
+# Ignore egg-info for local build at src/reasoning_trust.egg-info
+src/reasoning_trust.egg-info/
+
+.DS_Store
+
+#.env
+.venv
+venv/
