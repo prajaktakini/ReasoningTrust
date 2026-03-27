@@ -1,5 +1,171 @@
 # yaml
 models:
+  Qwen/Qwen3-8B:
+    model_family: "Qwen"
+    model_provider: "Alibaba"
+    model_string: "Qwen/Qwen3-8B"
+    tokenizer_string: "Qwen/Qwen3-8B"
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 29000
+    max_num_batched_tokens: 29000
+    gpu_memory_utilization: 0.95
+
+  Qwen/Qwen3-4B:
+    model_family: "Qwen"
+    model_provider: "Alibaba"
+    model_string: "Qwen/Qwen3-4B"
+    tokenizer_string: "Qwen/Qwen3-4B"
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+    require_explicit_disable_thinking: true
+
+  Qwen/Qwen3-1.7B:
+    model_family: "Qwen"
+    model_provider: "Alibaba"
+    model_string: "Qwen/Qwen3-1.7B"
+    tokenizer_string: "Qwen/Qwen3-1.7B"
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  Qwen/Qwen2.5-1.5B-Instruct:
+    model_family: "Qwen"
+    model_provider: "Alibaba"
+    model_string: "Qwen/Qwen2.5-1.5B-Instruct"
+    tokenizer_string: "Qwen/Qwen2.5-1.5B-Instruct"
+    instruct_model: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  meta-llama/Llama-3.1-8B-Instruct:
+    model_family: "Llama"
+    model_provider: "Meta"
+    model_string: "meta-llama/Llama-3.1-8B-Instruct"
+    tokenizer_string: "meta-llama/Llama-3.1-8B-Instruct"
+    instruct_model: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  meta-llama/Llama-3.3-70B-Instruct:
+    model_family: "Llama"
+    model_provider: "Meta"
+    model_string: "meta-llama/Llama-3.3-70B-Instruct"
+    tokenizer_string: "meta-llama/Llama-3.3-70B-Instruct"
+    instruct_model: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  simplescaling/s1.1-1.5B:
+    model_family: "SimpleScaling"
+    model_provider: "SimpleScaling"
+    model_string: "simplescaling/s1.1-1.5B"
+    tokenizer_string: "simplescaling/s1.1-1.5B"
+    require_explicit_disable_thinking: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  simplescaling/s1.1-7B:
+    model_family: "SimpleScaling"
+    model_provider: "SimpleScaling"
+    model_string: "simplescaling/s1.1-7B"
+    tokenizer_string: "simplescaling/s1.1-7B"
+    require_explicit_disable_thinking: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  simplescaling/s1.1-14B:
+    model_family: "SimpleScaling"
+    model_provider: "SimpleScaling"
+    model_string: "simplescaling/s1.1-14B"
+    tokenizer_string: "simplescaling/s1.1-14B"
+    require_explicit_disable_thinking: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  Qwen/Qwen2.5-7B-Instruct:
+    model_family: "Qwen"
+    model_provider: "Alibaba"
+    model_string: "Qwen/Qwen2.5-7B-Instruct"
+    tokenizer_string: "Qwen/Qwen2.5-7B-Instruct"
+    instruct_model: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  Qwen/Qwen2.5-14B-Instruct:
+    model_family: "Qwen"
+    model_provider: "Alibaba"
+    model_string: "Qwen/Qwen2.5-14B-Instruct"
+    tokenizer_string: "Qwen/Qwen2.5-14B-Instruct"
+    instruct_model: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B:
+    model_family: "DeepSeek"
+    model_provider: "DeepSeek AI"
+    model_string: "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+    tokenizer_string: "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+    require_explicit_disable_thinking: true
+
   deepseek-ai/DeepSeek-R1-Distill-Qwen-7B:
     model_family: "DeepSeek"
     model_provider: "DeepSeek AI"
@@ -9,15 +175,129 @@ models:
     top_p: 0.95
     top_k: 20
     max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+    require_explicit_disable_thinking: true
+
+  deepseek-ai/DeepSeek-R1-Distill-Qwen-14B:
+    model_family: "DeepSeek"
+    model_provider: "DeepSeek AI"
+    model_string: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"
+    tokenizer_string: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+    require_explicit_disable_thinking: true
+
+  deepseek-ai/DeepSeek-R1-Distill-Llama-8B:
+    model_family: "DeepSeek"
+    model_provider: "DeepSeek AI"
+    model_string: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+    tokenizer_string: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+    require_explicit_disable_thinking: true
+
+  deepseek-ai/DeepSeek-R1-Distill-Llama-70B:
+    model_family: "DeepSeek"
+    model_provider: "DeepSeek AI"
+    model_string: "deepseek-ai/DeepSeek-R1-Distill-Llama-70B"
+    tokenizer_string: "deepseek-ai/DeepSeek-R1-Distill-Llama-70B"
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+    require_explicit_disable_thinking: true
+
+  agentica-org/DeepScaleR-1.5B-Preview:
+    model_family: "Agentica"
+    model_provider: "Agentica"
+    model_string: "agentica-org/DeepScaleR-1.5B-Preview"
+    tokenizer_string: "agentica-org/DeepScaleR-1.5B-Preview"
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+    require_explicit_disable_thinking: true
+
+  Qwen/Qwen3-4B-Instruct-2507:
+    model_family: "Qwen"
+    model_provider: "Alibaba"
+    model_string: "Qwen/Qwen3-4B-Instruct-2507"
+    tokenizer_string: "Qwen/Qwen3-4B-Instruct-2507"
+    instruct_model: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  Qwen/Qwen2.5-3B:
+    # Non-Reasoning Model 
+    model_family: "Qwen"
+    model_provider: "Alibaba"
+    model_string: "Qwen/Qwen2.5-3B"
+    tokenizer_string: "Qwen/Qwen2.5-3B"
+    instruct_model: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
     max_model_len: 29000
     max_num_batched_tokens: 29000
     gpu_memory_utilization: 0.95
 
-  Qwen/Qwen3-8B:
+  Qwen/Qwen3-4B-Thinking-2507:
     model_family: "Qwen"
     model_provider: "Alibaba"
-    model_string: "Qwen/Qwen3-8B"
-    tokenizer_string: "Qwen/Qwen3-8B"
+    model_string: "Qwen/Qwen3-4B-Thinking-2507"
+    tokenizer_string: "Qwen/Qwen3-4B-Thinking-2507"
+    require_explicit_disable_thinking: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+
+  Qwen/Qwen3-30B-A3B-Instruct-2507:
+    model_family: "Qwen"
+    model_provider: "Alibaba"
+    model_string: "Qwen/Qwen3-30B-A3B-Instruct-2507"
+    tokenizer_string: "Qwen/Qwen3-30B-A3B-Instruct-2507"
+    instruct_model: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 29000
+    max_num_batched_tokens: 29000
+    gpu_memory_utilization: 0.95
+
+  Qwen/Qwen3-30B-A3B-Thinking-2507:
+    model_family: "Qwen"
+    model_provider: "Alibaba"
+    model_string: "Qwen/Qwen3-30B-A3B-Thinking-2507"
+    tokenizer_string: "Qwen/Qwen3-30B-A3B-Thinking-2507"
     temperature: 0.6
     top_p: 0.95
     top_k: 20

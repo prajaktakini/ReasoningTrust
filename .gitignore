@@ -10,3 +10,11 @@ src/reasoning_trust.egg-info/
 #.env
 .venv
 venv/
+build/
+dist/
+*.egg-info/
+*/__pycache__/
+
+results/
+toxicity/probing/
+scripts/probing_job.slurm

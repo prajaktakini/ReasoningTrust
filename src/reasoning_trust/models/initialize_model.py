@@ -9,11 +9,6 @@ from typing import Any, Dict, List, Tuple
 
 
 class BaseLLM:
-    """
-    Minimal interface + default extractor fallback.
-    Subclasses should set: tokenizer, sampling_params, engine (optional).
-    """
-
     tokenizer: Any = None
     sampling_params: Dict[str, Any] = None
     engine: Any = None
@@ -39,15 +34,12 @@ class BaseLLM:
 
 
 class QwenLLM(BaseLLM):
-    """
-    Lightweight Qwen wrapper. Accepts model config dict on init.
-    """
-
     def __init__(self, cfg: Dict[str, Any]):
         self.cfg = cfg or {}
 
         model_str = self.cfg.get("model_string")
         tokenizer_str = self.cfg.get("tokenizer_string", model_str)
+        #print("Tokenizer string: ", tokenizer_str)
 
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_str)
         self.sampling_params = SamplingParams(
@@ -59,29 +51,50 @@ class QwenLLM(BaseLLM):
 
         self.engine = LLM(
             model=model_str,
+            dtype="bfloat16",
             max_model_len=int(self.cfg.get("max_model_len", 29000)),
             max_num_batched_tokens=int(self.cfg.get("max_num_batched_tokens", 29000)),
             gpu_memory_utilization=float(self.cfg.get("gpu_memory_utilization", 0.95)),
+            # tensor_parallel_size=int(2),
         )
 
-    def generate(self, message: str, enable_thinking: bool) -> List[Any]:
-        # use tokenizer.apply_chat_template helper if available in repo
-        text = self.tokenizer.apply_chat_template(
-            message,
-            tokenize=False,
-            add_generation_prompt=True,
-            enable_thinking=enable_thinking,
-        )
+    def generate(self, message: str, enable_thinking: bool, instruct_model: bool, require_explicit_disable_thinking: bool) -> List[Any]:
+        if instruct_model:
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+        else:
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=enable_thinking,
+            )
+            
+            if require_explicit_disable_thinking and not enable_thinking:
+                if text.rstrip().endswith("<think>"):
+                    text = text.rstrip()[:-7]
+                text = text.rstrip() + "<think></think>"
+
         outputs = self.engine.generate([text], self.sampling_params)
 
         for output in outputs:
             prompt = output.prompt
             generated_text = output.outputs[0].text
-            # print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
-
+            # print(f"Prompt: {prompt}, Generated text: {generated_text}")
+        
         return outputs
 
-    def extract_think_and_content(self, generated_text: str) -> Tuple[str, str]:
+    def extract_think_and_content(self, generated_text: str, require_explicit_disable_thinking: bool) -> Tuple[str, str]:
+        if require_explicit_disable_thinking and '</think>' in generated_text:
+            if "</think>" in generated_text:
+                parts = re.split(r'</think>', generated_text, flags=re.IGNORECASE, maxsplit=1)
+                think_part = re.sub(r'(?i)<think>', '', parts[0]).strip()
+                content_part = parts[1].strip() if len(parts) > 1 else ""
+                return think_part, content_part
+            
         match = re.search(r'<think>(.*?)</think>', generated_text, re.DOTALL | re.IGNORECASE)
         think_content = match.group(1).strip() if match else ''
         after_think = generated_text.split('</think>')[-1].strip() if '</think>' in generated_text else generated_text.strip()
@@ -89,9 +102,228 @@ class QwenLLM(BaseLLM):
 
 
 class DeepSeekLLM(BaseLLM):
-    """
-    DeepSeek wrapper: initializes tokenizer and vLLM engine using cfg.
-    """
+    def __init__(self, cfg: Dict[str, Any]):
+        self.cfg = cfg or {}
+        model_str = self.cfg.get("model_string")
+        tokenizer_str = self.cfg.get("tokenizer_string", model_str)
+
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_str)
+
+        self.sampling_params = SamplingParams(
+            temperature=float(self.cfg.get("temperature", 0.6)),
+            top_p=float(self.cfg.get("top_p", 0.95)),
+            top_k=int(self.cfg.get("top_k", 20)),
+            max_tokens=int(self.cfg.get("max_tokens", 2048)),
+        )
+       
+        self.engine = LLM(
+            model=model_str,
+            dtype="bfloat16",
+            max_model_len=int(self.cfg.get("max_model_len", 29000)),
+            max_num_batched_tokens=int(self.cfg.get("max_num_batched_tokens", 29000)),
+            gpu_memory_utilization=float(self.cfg.get("gpu_memory_utilization", 0.95)),
+        )
+
+    def generate(self, message, enable_thinking: bool, instruct_model: bool, require_explicit_disable_thinking: bool) -> List[Any]:
+        if instruct_model:
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+        else:
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+                thinking=enable_thinking,
+            )
+
+            if enable_thinking:
+                if not text.rstrip().endswith("<think>"):
+                    text = text.rstrip() + "<think>\n"
+            else:
+                if text.rstrip().endswith("<think>"):
+                    text = text.rstrip()[:-7]
+                text = text.rstrip() + "<think>\n\n</think>\n\n"
+
+        outputs = self.engine.generate([text], self.sampling_params)
+
+        for output in outputs:
+            prompt = output.prompt
+            generated_text = output.outputs[0].text
+            #print(f"Prompt: {prompt}, Generated text: {generated_text}")
+
+        return outputs
+
+    def extract_think_and_content(self, generated_text: str, require_explicit_disable_thinking: bool) -> Tuple[str, str]:
+        if '</think>' in generated_text:
+            parts = generated_text.split('</think>', 1)
+            think = parts[0].replace('<think>', '').strip()
+            content = parts[1].strip()
+            return think, content
+        return '', generated_text.strip()
+
+
+class LlamaLLM(BaseLLM):
+
+    def __init__(self, cfg: Dict[str, Any]):
+        self.cfg = cfg or {}
+
+        model_str = self.cfg.get("model_string")
+        tokenizer_str = self.cfg.get("tokenizer_string", model_str)
+        #print("Tokenizer string: ", tokenizer_str)
+
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_str)
+        self.sampling_params = SamplingParams(
+            temperature=float(self.cfg.get("temperature", 0.6)),
+            top_p=float(self.cfg.get("top_p", 0.95)),
+            top_k=int(self.cfg.get("top_k", 20)),
+            max_tokens=int(self.cfg.get("max_tokens", 2048)),
+        )
+
+        self.engine = LLM(
+            model=model_str,
+            dtype="bfloat16",
+            max_model_len=int(self.cfg.get("max_model_len", 29000)),
+            max_num_batched_tokens=int(self.cfg.get("max_num_batched_tokens", 29000)),
+            gpu_memory_utilization=float(self.cfg.get("gpu_memory_utilization", 0.95)),
+            # tensor_parallel_size=int(2),
+        )
+
+    def generate(self, message: str, enable_thinking: bool, instruct_model: bool, require_explicit_disable_thinking: bool) -> List[Any]:
+        # use tokenizer.apply_chat_template helper if available in repo
+
+        if instruct_model:
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+        else:
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=enable_thinking,
+            )
+            #print("Generated text before thinking tags: ", text)
+            if require_explicit_disable_thinking and not enable_thinking:
+                if text.rstrip().endswith("<think>"):
+                    text = text.rstrip()[:-7]
+                text = text.rstrip() + "<think></think>"
+
+        outputs = self.engine.generate([text], self.sampling_params)
+
+        for output in outputs:
+            prompt = output.prompt
+            generated_text = output.outputs[0].text
+            #print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
+
+        return outputs
+
+    def extract_think_and_content(self, generated_text: str, require_explicit_disable_thinking: bool) -> Tuple[str, str]:
+        if require_explicit_disable_thinking and '</think>' in generated_text:
+            if "</think>" in generated_text:
+                parts = re.split(r'</think>', generated_text, flags=re.IGNORECASE, maxsplit=1)
+                think_part = re.sub(r'(?i)<think>', '', parts[0]).strip()
+                content_part = parts[1].strip() if len(parts) > 1 else ""
+                return think_part, content_part
+            
+        match = re.search(r'<think>(.*?)</think>', generated_text, re.DOTALL | re.IGNORECASE)
+        think_content = match.group(1).strip() if match else ''
+        after_think = generated_text.split('</think>')[-1].strip() if '</think>' in generated_text else generated_text.strip()
+        return think_content, after_think
+
+
+class SimpleScalingLLM(BaseLLM):
+   
+    def __init__(self, cfg: Dict[str, Any]):
+        self.cfg = cfg or {}
+        model_str = self.cfg.get("model_string")
+        tokenizer_str = self.cfg.get("tokenizer_string", model_str)
+
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_str)
+
+        self.sampling_params = SamplingParams(
+            temperature=float(self.cfg.get("temperature", 0.6)),
+            top_p=float(self.cfg.get("top_p", 0.95)),
+            top_k=int(self.cfg.get("top_k", 20)),
+            max_tokens=int(self.cfg.get("max_tokens", 2048)),
+        )
+      
+        self.engine = LLM(
+            model=model_str,
+            dtype="bfloat16",
+            max_model_len=int(self.cfg.get("max_model_len", 29000)),
+            max_num_batched_tokens=int(self.cfg.get("max_num_batched_tokens", 29000)),
+            gpu_memory_utilization=float(self.cfg.get("gpu_memory_utilization", 0.95)),
+        )
+
+    def generate(self, message, enable_thinking: bool, instruct_model: bool, require_explicit_disable_thinking: bool) -> List[Any]:
+        if instruct_model:
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+        else:
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+                thinking=enable_thinking,
+            )
+
+            if enable_thinking:
+                if not text.rstrip().endswith("`<think>`"):
+                    text = text.rstrip() + "`<think>`\n"
+            else:
+                if require_explicit_disable_thinking:
+                    # For SimpleScaling models, explicitly disable thinking
+                    if text.rstrip().endswith("`<think>`"):
+                        text = text.rstrip()[:-7]
+                    text = text.rstrip() + "`<think>``</think>`"
+                else:
+                    if text.rstrip().endswith("`<think>`"):
+                        text = text.rstrip()[:-7]
+                    text = text.rstrip() + "`<think>`\n\n`</think>`\n\n"
+
+        outputs = self.engine.generate([text], self.sampling_params)
+
+        for output in outputs:
+            prompt = output.prompt
+            generated_text = output.outputs[0].text
+            #print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
+
+        return outputs
+
+    def extract_think_and_content(self, generated_text: str, require_explicit_disable_thinking: bool) -> Tuple[str, str]:
+        if not isinstance(generated_text, str):
+            return "", str(generated_text)
+
+        answer_match = re.search(r'\banswer\b', generated_text, re.IGNORECASE)
+
+        if answer_match:
+            answer_pos = answer_match.start()
+            think_part = generated_text[:answer_pos].strip()
+            answer_part = generated_text[answer_match.end():].strip()
+            
+            think_part = re.sub(r'^\s*think\s*\n?', '', think_part, flags=re.IGNORECASE).strip()
+            answer_part = re.sub(r'^\s*(answer\s*\n?|answer\s*:\s*)', '', answer_part, flags=re.IGNORECASE).strip()
+            return think_part, answer_part
+    
+        # Fallback: if no "answer" marker found, check for other formats
+        if '`</think>`' in generated_text:
+            parts = generated_text.split('`</think>`', 1)
+            think = parts[0].replace('`<think>`', '').strip()
+            content = parts[1].strip()
+            return think, content
+        
+        return '', generated_text.strip()
+
+
+class AgenticaLLM(BaseLLM):
 
     def __init__(self, cfg: Dict[str, Any]):
         self.cfg = cfg or {}
@@ -106,48 +338,56 @@ class DeepSeekLLM(BaseLLM):
             top_k=int(self.cfg.get("top_k", 20)),
             max_tokens=int(self.cfg.get("max_tokens", 2048)),
         )
-        # engine
+ 
         self.engine = LLM(
             model=model_str,
+            dtype="bfloat16",
             max_model_len=int(self.cfg.get("max_model_len", 29000)),
             max_num_batched_tokens=int(self.cfg.get("max_num_batched_tokens", 29000)),
             gpu_memory_utilization=float(self.cfg.get("gpu_memory_utilization", 0.95)),
         )
 
-    def generate(self, message, enable_thinking: bool) -> List[Any]:
-        print("I am here - Enable thinking: ", enable_thinking)
-        # use tokenizer.apply_chat_template helper if available in repo
-        text = self.tokenizer.apply_chat_template(
-            message,
-            tokenize=False,
-            add_generation_prompt=True,
-            thinking=enable_thinking,
-        )
-
-        if enable_thinking:
-            if not text.rstrip().endswith("<think>"):
-                text = text.rstrip() + "<think>\n"
+    def generate(self, message, enable_thinking: bool, instruct_model: bool, require_explicit_disable_thinking: bool) -> List[Any]:
+        if instruct_model:
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
         else:
-            if text.rstrip().endswith("<think>"):
-                text = text.rstrip()[:-7]
-            text = text.rstrip() + "<think>\n\n</think>\n\n"
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+                thinking=enable_thinking,
+            )
+
+            if enable_thinking:
+                if not text.rstrip().endswith("<think>"):
+                    text = text.rstrip() + "<think>\n"
+            else:
+                if text.rstrip().endswith("<think>"):
+                    text = text.rstrip()[:-7]
+                text = text.rstrip() + "<think>\n\n</think>\n\n"
 
         outputs = self.engine.generate([text], self.sampling_params)
 
         for output in outputs:
             prompt = output.prompt
             generated_text = output.outputs[0].text
-            print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
+            #print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
 
         return outputs
 
-    def extract_think_and_content(self, generated_text: str) -> Tuple[str, str]:
+    def extract_think_and_content(self, generated_text: str, require_explicit_disable_thinking: bool) -> Tuple[str, str]:
         if '</think>' in generated_text:
             parts = generated_text.split('</think>', 1)
             think = parts[0].replace('<think>', '').strip()
             content = parts[1].strip()
+            #print(f"Think: {think!r}, Content: {content!r}")
             return think, content
-        return '', generated_text.strip()
+        return '', generated_text.strip()  
+        
 
 
 @dataclass
@@ -175,23 +415,32 @@ def load_model_config(model_name: str) -> Dict[str, Any]:
 
 def initialize_model(model_name: str = None) -> Tuple[Any, Dict[str, Any], Any]:
     model_cfg = load_model_config(model_name)
+    #print("Loaded model config: ", model_cfg)
 
     if "deepseek" in model_name.lower():
         model = DeepSeekLLM(model_cfg)
     elif "qwen" in model_name.lower():
         model = QwenLLM(model_cfg)
+    elif "simplescaling" in model_name.lower():
+        model = SimpleScalingLLM(model_cfg)
+    elif "llama" in model_name.lower():
+        print("Initializing Llama model")
+        model = LlamaLLM(model_cfg)
+    elif "agentica" in model_name.lower():
+        print("Initializing Agentica model")
+        model = AgenticaLLM(model_cfg)
     else:
         # fallback to QwenLLM if unknown
         model = QwenLLM(model_cfg)
 
     return getattr(model, "tokenizer", None), getattr(model, "sampling_params", None), model
 
-def generate_response(llm_model: Any, message: str, enable_thinking: bool) -> List[ModelOutput]:
-    response = llm_model.generate(message, enable_thinking)
+
+def generate_response(llm_model: Any, message: str, enable_thinking: bool, instruct_model:bool, require_explicit_disable_thinking: bool) -> List[ModelOutput]:
+    response = llm_model.generate(message, enable_thinking, instruct_model, require_explicit_disable_thinking)
 
     for output in response:
         prompt = output.prompt
         generated_text = output.outputs[0].text
-        # print(f"Prompt: {prompt!r}, Generated text: {generated_text!r}")
-
+        #print(f"Prompt: {prompt}, Generated text: {generated_text}")
     return response

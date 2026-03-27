@@ -1,0 +1,15 @@
+numpy
+pandas
+openpyxl
+pyyaml
+torch
+transformers
+vllm
+datasets
+google-api-python-client
+requests
+tqdm
+scikit-learn
+scipy
+matplotlib
+seaborn
