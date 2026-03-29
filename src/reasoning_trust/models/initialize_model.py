@@ -1,7 +1,9 @@
+import json
 import os
-import yaml
 import re
+import yaml
 
+import requests
 from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
 from dataclasses import dataclass
@@ -386,8 +388,7 @@ class AgenticaLLM(BaseLLM):
             content = parts[1].strip()
             #print(f"Think: {think!r}, Content: {content!r}")
             return think, content
-        return '', generated_text.strip()  
-        
+        return '', generated_text.strip()
 
 
 @dataclass
@@ -398,6 +399,84 @@ class InnerOutput:
 class ModelOutput:
     prompt: str
     outputs: List[InnerOutput]
+
+
+class AzureCloudLLM(BaseLLM):
+    """OpenAI-compatible chat completions over HTTPS (e.g. Azure AI Foundry)."""
+
+    def __init__(self, cfg: Dict[str, Any]):
+        self.cfg = cfg or {}
+        self.model_url = self.cfg.get("model_url")
+        if not self.model_url:
+            raise ValueError("is_cloud_model requires model_url in model config")
+        self.api_key = os.environ.get("AZURE_LLM_API_KEY")
+        if not self.api_key:
+            raise ValueError("AZURE_LLM_API_KEY must be set for cloud models")
+        self.tokenizer = None
+        self.sampling_params = None
+
+    def generate(
+        self,
+        message: Any,
+        enable_thinking: bool,
+        instruct_model: bool,
+        require_explicit_disable_thinking: bool,
+    ) -> List[ModelOutput]:
+        del enable_thinking, instruct_model, require_explicit_disable_thinking
+        if not isinstance(message, list):
+            raise TypeError("Azure cloud model expects chat messages as a list of dicts")
+        body: Dict[str, Any] = {
+            "messages": message,
+            "temperature": float(self.cfg.get("temperature", 0.6)),
+            "top_p": float(self.cfg.get("top_p", 0.95)),
+            "max_tokens": int(self.cfg.get("max_tokens", 4096)),
+        }
+        deployment = self.cfg.get("deployment_name") or self.cfg.get("model_string")
+        if not deployment:
+            raise ValueError(
+                "Azure cloud models need azure_deployment (or model_string) in models.yaml "
+                "so the API knows which deployment to use (DeploymentNotFound if missing)."
+            )
+        body["model"] = deployment
+        headers = {
+            "Content-Type": "application/json",
+            "api-key": self.api_key,
+        }
+        resp = requests.post(self.model_url, headers=headers, json=body, timeout=600)
+        if not resp.ok:
+            raise RuntimeError(
+                f"Azure chat request failed ({resp.status_code}): {resp.text[:2000]}"
+            )
+        data = resp.json()
+        choices = data.get("choices") or []
+        if not choices:
+            raise RuntimeError(f"Azure response missing choices: {json.dumps(data)[:2000]}")
+        msg = choices[0].get("message") or {}
+        text = msg.get("content")
+        if text is None:
+            raise RuntimeError(f"Azure response missing message content: {json.dumps(data)[:2000]}")
+        prompt_str = json.dumps(message)
+        return [ModelOutput(prompt=prompt_str, outputs=[InnerOutput(text=text)])]
+
+    def extract_think_and_content(
+        self, generated_text: str, require_explicit_disable_thinking: bool
+    ) -> Tuple[str, str]:
+        if require_explicit_disable_thinking and "</think>" in generated_text:
+            if "</think>" in generated_text:
+                parts = re.split(r"</think>", generated_text, flags=re.IGNORECASE, maxsplit=1)
+                think_part = re.sub(r"(?i)<think>", "", parts[0]).strip()
+                content_part = parts[1].strip() if len(parts) > 1 else ""
+                return think_part, content_part
+
+        match = re.search(r"<think>(.*?)</think>", generated_text, re.DOTALL | re.IGNORECASE)
+        think_content = match.group(1).strip() if match else ""
+        after_think = (
+            generated_text.split("</think>")[-1].strip()
+            if "</think>" in generated_text
+            else generated_text.strip()
+        )
+        return think_content, after_think
+
 
 def load_models_config() -> Dict[str, Any]:
     base = os.path.dirname(os.path.dirname(__file__))  # points to src/reasoning_trust
@@ -416,6 +495,10 @@ def load_model_config(model_name: str) -> Dict[str, Any]:
 def initialize_model(model_name: str = None) -> Tuple[Any, Dict[str, Any], Any]:
     model_cfg = load_model_config(model_name)
     #print("Loaded model config: ", model_cfg)
+
+    if model_cfg.get("is_cloud_model"):
+        model = AzureCloudLLM(model_cfg)
+        return getattr(model, "tokenizer", None), getattr(model, "sampling_params", None), model
 
     if "deepseek" in model_name.lower():
         model = DeepSeekLLM(model_cfg)

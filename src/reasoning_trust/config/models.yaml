@@ -236,6 +236,20 @@ models:
     gpu_memory_utilization: 0.85
     require_explicit_disable_thinking: true
 
+  agentica-org/DeepCoder-1.5B-Preview:
+    model_family: "Agentica"
+    model_provider: "Agentica"
+    model_string: "agentica-org/DeepCoder-1.5B-Preview"
+    tokenizer_string: "agentica-org/DeepCoder-1.5B-Preview"
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    max_model_len: 8192
+    max_num_batched_tokens: 8192
+    gpu_memory_utilization: 0.85
+    require_explicit_disable_thinking: true
+
   Qwen/Qwen3-4B-Instruct-2507:
     model_family: "Qwen"
     model_provider: "Alibaba"
@@ -305,6 +319,34 @@ models:
     max_model_len: 29000
     max_num_batched_tokens: 29000
     gpu_memory_utilization: 0.95
+
+  Azure-cloud/meta-llama/Llama-3.3-70B-Instruct:
+    model_family: "Llama"
+    model_provider: "Llama"
+    inference_provider: "Azure-cloud"
+    is_cloud_model: true
+    # OpenAI-compatible chat API (matches Azure Foundry sample: base .../openai/v1/)
+    model_url: "https://llm-defeasible-foundry.services.ai.azure.com/openai/v1/chat/completions"
+    # Must match the deployment name in Azure (same as model= in OpenAI SDK sample)
+    deployment_name: "Llama-3.3-70B-Instruct"
+    instruct_model: true
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+
+  Azure-cloud/deepseek-ai/DeepSeek-R1-Distill-Llama-70B:
+    model_family: "DeepSeek"
+    model_provider: "DeepSeek AI"
+    inference_provider: "Azure-cloud"
+    is_cloud_model: true
+    model_url: "PLACEHOLDER_MODEL_URL"
+    deployment_name: "PLACEHOLDER_DEPLOYMENT_NAME"
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+    max_tokens: 4096
+    require_explicit_disable_thinking: true
 
 defaults:
   model: "Qwen/Qwen3-8B"

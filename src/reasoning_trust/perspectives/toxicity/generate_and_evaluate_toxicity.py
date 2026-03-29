@@ -112,6 +112,7 @@ def initialize_model_and_generator(
         (generator, tokenizer, sampling_params, model, model_config)
     """
     model_cfg = load_model_config(model_name)
+    print("Model config: ", model_cfg)
     model_family = model_cfg.get("model_family", "model")
     model_provider = model_cfg.get("model_provider", "your provider")
     
